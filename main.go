@@ -145,7 +145,7 @@ func main() {
 
 				numerator := sumColumn(&colum) + 1
 
-				trainResult := float32(numerator) / float32(denominator)
+				trainResult := float32(numerator) / float32(denominator) // denominador enorme para numeradores muito pequenos
 				// fmt.Sprintf("numerator: %g  | denominador: %g | result: %g", float32(numerator), float32(denominator), trainResult)
 				train[cl][c] = trainResult
 			}
@@ -158,7 +158,7 @@ func main() {
 		var result float64
 		result = 0.0
 		for c := range records[2] {
-			result += float64(train[cl][c])
+			result *= float64(train[cl][c]) //os numeros ficam tão grandes que a variavel ficar zerada
 		}
 		fmt.Sprintf("Classe: %s  | Pro: %g", classes[cl], result)
 	}
