@@ -29,7 +29,9 @@ func distinct(elements *[]string) (result []string) {
 
 func getCollum(elements *[][]string, ColumnIndex int) (column []string) {
 	for i := range *elements {
-		column = append(column, (*elements)[i][ColumnIndex])
+		if i != 0 {
+			column = append(column, (*elements)[i][ColumnIndex])
+		}
 	}
 	return
 }
@@ -70,26 +72,12 @@ func sumColumn(column *[]string) (sum int) {
 	return
 }
 
-//TODO: simplyfy this method
-func getValuesByClass(records *[][]string, class string) (newRecords [][]string, err error) {
-	var lAux, cAux int
-	lenC := len((*records)[0])
+func getRecorderByClass(records [][]string, class string) (newRecords [][]string, err error) {
 	newRecords = make([][]string, 1)
-	for l := range *records {
-		for c := range (*records)[l] {
-			if (*records)[l][0] == class {
-				if cAux == lenC {
-					lAux++
-					newRecords = append(newRecords, []string{})
-					newRecords[lAux] = append(newRecords[lAux], (*records)[l][c])
-				} else {
-					cAux++
-					newRecords[lAux] = append(newRecords[lAux], (*records)[l][c])
-				}
-
-			}
+	for l := range records {
+		if records[l][0] == class {
+			newRecords = append(newRecords, records[l])
 		}
-
 	}
 	return
 }
@@ -101,26 +89,21 @@ func sumMatrix(matrix *[][]string) (value int) {
 			number, _ := strconv.Atoi((*matrix)[l][c])
 			value += number
 		}
-
-	}
-	return
-}
-
-func multiplyArray(elements *[]float32) (result float64) {
-	result = 1.0
-	for i := range *elements {
-		result *= float64((*elements)[i])
 	}
 	return
 }
 
 func main() {
 	records := readFile("data.csv")
-	columClassifier := getCollum(&records, 0)
-	classes := distinct(&columClassifier)
+	classes := getCollum(&records, 0)
+	classes = distinct(&classes)
 
-	train := make([][]float32, len(classes))
+	//choose some csv line
+	//obs: the first colum is the class(the number that's written on picture)
+	line := records[63]
+
 	lenC := len(records[0])
+	//lenL := len(records)
 
 	var wgCl sync.WaitGroup
 	wgCl.Add(len(classes))
@@ -129,38 +112,32 @@ func main() {
 		go func(cl int) {
 			defer wgCl.Done()
 
-			train[cl] = make([]float32, lenC)
-
-			recordsByClass, err := getValuesByClass(&records, classes[cl])
+			recordsByClass, err := getRecorderByClass(records, classes[cl])
 			if err != nil {
 				fmt.Println("erro:", err)
 			}
 
 			denominator := (sumMatrix(&recordsByClass) + lenC)
 
-			fmt.Println("Colunas: ", lenC)
-			for c := range records[0] {
+			//prob := float64(len(recordsByClass)) / float64(lenL)
+			prob := 1.0
 
-				colum := getCollum(&records, c)
+			for c := range line {
+				if c != 0 {
+					if line[c] != "0" {
+						colum := getCollum(&recordsByClass, c)
 
-				numerator := sumColumn(&colum) + 1
-
-				trainResult := float32(numerator) / float32(denominator) // denominador enorme para numeradores muito pequenos
-				// fmt.Sprintf("numerator: %g  | denominador: %g | result: %g", float32(numerator), float32(denominator), trainResult)
-				train[cl][c] = trainResult
+						numerator := sumColumn(&colum) + 1
+						train := float64(numerator) / float64(denominator)
+						//time, _ := strconv.ParseFloat(line[c], 64)
+						//prob *= ((train + 1) * time)
+						prob *= (train + 1)
+					}
+				}
 			}
-
+			mgn := fmt.Sprintf("Class: %s | prob: %v | answer: %s", classes[cl], prob, line[0])
+			fmt.Println(mgn)
 		}(cl)
 	}
 	wgCl.Wait()
-
-	for cl := range classes {
-		var result float64
-		result = 0.0
-		for c := range records[2] {
-			result *= float64(train[cl][c]) //os numeros ficam tão grandes que a variavel ficar zerada
-		}
-		fmt.Sprintf("Classe: %s  | Pro: %g", classes[cl], result)
-	}
-
 }
